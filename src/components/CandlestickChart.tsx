@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { createChart, IChartApi, CandlestickSeries } from "lightweight-charts";
+import { createChart, IChartApi, ISeriesApi } from "lightweight-charts";
 
 type OHLCV = {
   date: string;
@@ -14,9 +14,9 @@ type OHLCV = {
 export default function CandlestickChart({ data }: { data: OHLCV[] }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<CandlestickSeries | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
 
-  // 🔹 Create chart ONCE
+  // Create chart ONCE
   useEffect(() => {
     if (!containerRef.current || chartRef.current) return;
 
@@ -31,9 +31,7 @@ export default function CandlestickChart({ data }: { data: OHLCV[] }) {
         vertLines: { color: "#e5e7eb" },
         horzLines: { color: "#e5e7eb" },
       },
-      timeScale: {
-        timeVisible: true,
-      },
+      timeScale: { timeVisible: true },
     });
 
     const series = chart.addCandlestickSeries({
@@ -49,29 +47,28 @@ export default function CandlestickChart({ data }: { data: OHLCV[] }) {
     seriesRef.current = series;
 
     return () => {
-      // ✅ Only dispose once (on real unmount)
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
     };
   }, []);
 
-  // 🔹 Update data ONLY
+  // Update data
   useEffect(() => {
-    if (!seriesRef.current || !data || data.length < 2) return;
+    if (!seriesRef.current || data.length < 2) return;
 
-    const formatted = data
-      .filter(d => d.date)
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .map(d => ({
-        time: d.date as string, // YYYY-MM-DD
-        open: d.open,
-        high: d.high,
-        low: d.low,
-        close: d.close,
-      }));
+    seriesRef.current.setData(
+      data
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map(d => ({
+          time: d.date,
+          open: d.open,
+          high: d.high,
+          low: d.low,
+          close: d.close,
+        }))
+    );
 
-    seriesRef.current.setData(formatted);
     chartRef.current?.timeScale().fitContent();
   }, [data]);
 
